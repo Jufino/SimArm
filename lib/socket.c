@@ -28,3 +28,16 @@ void uzavri(void){
 		exit(4);
 	}
 }
+/*void *nacitajAsyn(void){
+	return buff;
+}
+void *read_socket(void *prem){
+	int length=0;
+        while(length+=read(((int*)prem),&buff, sizeof(socket_data)<sizeof((socket_data))));
+}
+void vytvorAsyn(int socket){
+        pthread_t vlakno;
+        pthread_attr_t parametre;
+        if(pthread_attr_init(&parametre)) perror("Problem vytvorenia vlakna pre odoslanie");
+        pthread_create(&vlakno,&parametre,read_socket,&socket);
+}*/

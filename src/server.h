@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-//#include "../lib/robotArm.h"
-//void klient1(char *ip,int port);
-//void klient2(char *ip,int port);
-//void klient3(char *ip,int port);
-//void klient4(char *ip,int port);
+#include "../lib/robotArm.h"
+#include "../lib/sharedMem.h"
 void server(char *ip,int port);

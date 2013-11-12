@@ -1,22 +1,30 @@
-zadanie:server.o client1.o client2.o client3.o client4.o client5.o robotArm.o sharedMem.o zadanie.c
-	gcc zadanie.c ../cmp/server.o ../cmp/client1.o ../cmp/client2.o ../cmp/client3.o ../cmp/client4.o ../cmp/sharedMem.o ../cmp/socket.o -o zadanie
-server.o:server.c proghead.h robotArm.o sharedMem.o
-	gcc -c server.c ../cmp/sharedMem.o ../cmp/robotArm.o  -o ../cmp/server.o
-client1.o:client1.c socket.o proghead.h robotArm.o
-	gcc -c client1.c ../cmp/socket.o ../cmp/robotArm.o -o ../cmp/client1.o
-client2.o:client2.c socket.o proghead.h robotArm.o
-	gcc -c client2.c ../cmp/socket.o ../cmp/robotArm.o -o ../cmp/client2.o
-client3.o:client3.c socket.o proghead.h robotArm.o
-	gcc -c client3.c ../cmp/socket.o ../cmp/robotArm.o -o ../cmp/client3.o
-client4.o:client4.c socket.o proghead.h robotArm.o
-	gcc -c client4.c ../cmp/socket.o ../cmp/robotArm.o -o ../cmp/client4.o
-client5.o:client5.c socket.o proghead.h robotArm.o 
-	$(CROSS_COMPILE)g++ -Wall -g -c client5.c ../cmp/robotArm.o -o ../cmp/client5.o `pkg-config --libs --cflags opencv`
-robotArm.o:../lib/robotArm.h ../lib/robotArm.c
-	gcc -c ../lib/robotArm.c -o ../cmp/robotArm.o
-socket.o:../lib/socket.h ../lib/socket.c
-	gcc -c ../lib/socket.c -o ../cmp/socket.o
-sharedMem.o:../lib/sharedMem.h ../lib/sharedMem.c
-	gcc -c ../lib/sharedMem.c -o ../cmp/sharedMem.o
+C=gcc
+CP=g++
+CPP=$(CROSS_COMPILE)g++ -Wall -g
+OFLAGS=`pkg-config --libs --cflags opencv`
+
+all:server client1 client2 client3 client5
+server: libdecodeArgv.o librobotArm.o libsharedMem.o server.c
+	$(CP) server.c librobotArm.o libsharedMem.o libdecodeArgv.o -o server -lm -g
+client1:libdecodeArgv.o libsocket.o librobotArm.o client1.c
+	$(CP) client1.c libsocket.o librobotArm.o libdecodeArgv.o -lpthread -o client1 -lm -g -std=c++11 
+client2:libsocket.o librobotArm.o client2.c
+	$(CP) client2.c libsocket.o librobotArm.o libdecodeArgv.o -pthread -o client2 -lm -g -std=c++11 
+client3:libsocket.o librobotArm.o client3.c
+	$(CP) client3.c libsocket.o librobotArm.o libdecodeArgv.o -pthread -o client3 -lm -g -std=c++11 
+client4:libsocket.o librobotArm.o client4.c
+	$(CP) client4.c libsocket.o librobotArm.o libdecodeArgv.o -pthread -o client4 -lm -g -std=c++11 
+client5:libsocket.o librobotArm.o libdecodeArgv.o client5.c
+	$(CPP) client5.c librobotArm.o libsocket.o libdecodeArgv.o -o client5 -std=c++11 $(OFLAGS)
+librobotArm.o:robotArm.h robotArm.c
+	$(CP) -c robotArm.c -o librobotArm.o -lm
+libsocket.o:socket.h socket.c
+	$(CP) -c socket.c -lrobotArm -o libsocket.o -lm
+libsharedMem.o:sharedMem.h sharedMem.c
+	$(CP) -c sharedMem.c -lrobotArm -o libsharedMem.o -lm
+libdecodeArgv.o:decodeArgv.h decodeArgv.c
+	$(CP) -c decodeArgv.c -o libdecodeArgv.o
 clean:
 	rm -f ../cmp/*
+shared: 
+	ipcrm -M 12345

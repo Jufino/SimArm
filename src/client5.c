@@ -45,25 +45,24 @@ struct RobotArm *pdataArm = &dataArm;
 int sock;
 void *readSocket(void*){
 	int length=0;
-	printf("Moznost prijmania zo serveru");
+//	printf("Moznost prijmania zo serveru");
 	while(1){    
 		while((length+=recv(sock,&dataArm, sizeof(dataArm),0)) < sizeof(dataArm));
-		printf("Prijate od serveru: %f\n",dataArm.actAlfa);
+//		printf("Prijate od serveru: %f\n",dataArm.actAlfa);
 		length=0;
 	}
 }
 int main(int argc,char *argv[]){
-	int rychlost=1;
 	int port;
 	char *ip;
  if(decodeArgv(argc,argv,&ip,&port)){
 	sock = pripoj(ip,&port);
 	int por=5;
-	write(sock,&por,sizeof(int)*sizeof(por));
+	write(sock,&por,sizeof(por));
 	pthread_t vlakno;
         pthread_create(&vlakno,NULL,&readSocket,NULL);
 	while(1){
-cvNamedWindow(nazov_okna, CV_WINDOW_AUTOSIZE);
+	cvNamedWindow(nazov_okna, CV_WINDOW_AUTOSIZE);
         cvSetMouseCallback(nazov_okna, mouseEvent, 0);
         int q=-1;
         while(q!=27){
@@ -76,12 +75,11 @@ cvNamedWindow(nazov_okna, CV_WINDOW_AUTOSIZE);
         }
         else printf("Nie je mozne dosiahnut pozadovany bod\n");
 */
-	        angleArmAct(&dataArm);
                 int x[] = {(int)dataArm.x0,(int)dataArm.actX1,(int)dataArm.actX2};
                 int y[] = {(int)dataArm.y0,(int)dataArm.actY1,(int)dataArm.actY2};
                 plot(x,y,3);
 
-        q = cvWaitKey(5);
+        q = cvWaitKey(100);
 }
 cvDestroyWindow(nazov_okna);
 		}

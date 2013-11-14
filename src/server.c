@@ -8,16 +8,19 @@
 #include "sharedMem.h"
 #include "socket.h"
 #include "decodeArgv.h"
+#include <pthread.h>
 void chyba(char *text,int cislo){
         perror(text);
         exit(cislo);
 }
 int *pocitadlo=0;
-int main(int argc,char *argv[]){
-    int sockFileDesc, client;
-    struct sockaddr_in adresa,pripojilSa;
+int client;
     struct RobotArm dataArm = RobotArm_default;
     struct RobotArm *pdataArm=&dataArm;
+void *sendSocket(void*);
+int main(int argc,char *argv[]){
+    int sockFileDesc;
+    struct sockaddr_in adresa,pripojilSa;
     pdataArm = &dataArm;
     int length=0;
 //    struct datSock dataSocket;
@@ -49,34 +52,62 @@ if(decodeArgv(argc,argv,NULL,&port)){
 			vytvorZP(12345); 
 			pripojZP(&pdataArm);	//spoji zdielanu pamet so strukturou armData
 			printf("Pripojeny klient c:%d\n",por);
-			pdataArm->alfa=5;
-			pdataArm->beta=5;
+
+			pdataArm->alfa=0;
+			pdataArm->beta=0;
                         pdataArm->r0=100;
                         pdataArm->r1=50;
-                        pdataArm->x0=200;
+                        pdataArm->x0=250;
 			pdataArm->y0=10;
+			pdataArm->rych0=0.05;
+			pdataArm->rych1=0.05;
 			switch(por){
 				case 1:while(1){
 						length=0;
-						while((length+=recv(client,&pdataArm->actAlfa, sizeof(pdataArm->actAlfa),0)) < sizeof(pdataArm->actAlfa));
+                                                while((length+=recv(client,&pdataArm->actAlfa, sizeof(pdataArm->actAlfa),0)) < sizeof(pdataArm->actAlfa));
 						length=0;
-        					while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));				
-					}break;
+						while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
+						}break;
 				case 2:while(1){
-                                                length=0;
-                                                while((length+=recv(client,&pdataArm->actBeta, sizeof(pdataArm->actBeta),0)) < sizeof(pdataArm->actBeta));
-                                                length=0;
-                                                while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm)); 
+                                               length=0;
+                                               while((length+=recv(client,&pdataArm->actBeta, sizeof(pdataArm->actBeta),0)) < sizeof(pdataArm->actBeta));
+
+						length=0;
+                                                while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
+                                            
                                        }break;
-				default:
-					//printf("ostatny clienti\n");
-					pripojZP(&pdataArm); 
+				case 3:	pthread_t vlakno;
+        				pthread_attr_t parametre;
+        				if(pthread_attr_init(&parametre)) perror("Problem inicializacie vlakna");
+        				pthread_attr_setdetachstate(&parametre, PTHREAD_CREATE_DETACHED);
+        				pthread_create(&vlakno,&parametre,sendSocket,NULL);
+
+                                        while(1){
+                                                length=0;
+                                                while((length+=recv(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
+                                        }break;
+				case 4:/*
 					while(1){
-                                        //        length=0;
-                                        //        while((length+=recv(client,&pdataArm->actBeta, sizeof(pdataArm->actBeta),0)) < sizeof(pdataArm->actBeta));
+						length=0;
+						while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
+						length=0;
+                                                while((length+=recv(client,&pdataArm->actX1, sizeof(pdataArm->actX1),0)) < sizeof(pdataArm->actX1));
+	                                        length=0;
+                                                while((length+=recv(client,&pdataArm->actY1, sizeof(pdataArm->actY1),0)) < sizeof(pdataArm->actY1));
+                                                length=0;
+                                                while((length+=recv(client,&pdataArm->actX2, sizeof(pdataArm->actX2),0)) < sizeof(pdataArm->actX2));
+                                                length=0;
+                                                while((length+=recv(client,&pdataArm->actY2, sizeof(pdataArm->actY2),0)) < sizeof(pdataArm->actY2));
+
+
+					}*/
+				break;
+				default:
+					while(1){
+						angleArmAct(&(*pdataArm));
                                                 length=0;
                                                 while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
-	                                sleep(1); 
+	                                usleep(100000); 
       					}break;
 			}
 //			uvolniZP();*/
@@ -89,4 +120,12 @@ if(decodeArgv(argc,argv,NULL,&port)){
     }
 //    uzavriZP();
 }
+}
+void *sendSocket(void*){
+        int length=0;
+        while(1){
+                while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
+                length=0;
+		usleep(100000);
+        }
 }

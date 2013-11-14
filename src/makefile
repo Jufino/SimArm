@@ -3,9 +3,9 @@ CP=g++
 CPP=$(CROSS_COMPILE)g++ -Wall -g
 OFLAGS=`pkg-config --libs --cflags opencv`
 
-all:server client1 client2 client3 client5
+all:server client1 client2 client3 client4 client5
 server: libdecodeArgv.o librobotArm.o libsharedMem.o server.c
-	$(CP) server.c librobotArm.o libsharedMem.o libdecodeArgv.o -o server -lm -g
+	$(CP) server.c librobotArm.o libsharedMem.o libdecodeArgv.o -lpthread -o server -lm -g
 client1:libdecodeArgv.o libsocket.o librobotArm.o client1.c
 	$(CP) client1.c libsocket.o librobotArm.o libdecodeArgv.o -lpthread -o client1 -lm -g -std=c++11 
 client2:libsocket.o librobotArm.o client2.c

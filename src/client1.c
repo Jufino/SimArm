@@ -21,8 +21,11 @@ int main(int argc,char *argv[]){
 	char *ip;
  if(decodeArgv(argc,argv,&ip,&port)){
 	sock = pripoj(ip,&port);
-	int por=1;
-	write(sock,&por,sizeof(int)*sizeof(por));
+	int *por=(int*)malloc(sizeof(int));
+        *por=1;
+        odosliInt(&(*por));
+        printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
+        free(por);
 	pthread_t vlakno;
         pthread_create(&vlakno,NULL,&readSocket,NULL);
 	while(1){

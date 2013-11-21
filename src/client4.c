@@ -12,9 +12,12 @@ int main(int argc, char* argv[]){
 	char*ip;
  if(decodeArgv(argc,argv,&ip,&port)){
 	int sock = pripoj(ip,&port);
-	int por=4;
-	struct act aktualne;
-	write(sock,&por,sizeof(int)*sizeof(por));
+	struct act aktualne;	
+	int *por=(int*)malloc(sizeof(int));
+        *por=4;
+        odosliInt(&(*por));
+        printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
+        free(por);
 	while(1){
 		nacitajRobotArm(&dataArm);
 		angleArmAct(&dataArm);

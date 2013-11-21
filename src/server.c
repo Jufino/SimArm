@@ -10,7 +10,7 @@
 #include "decodeArgv.h"
 #include <pthread.h>
 #include "semafor.h"
-void chyba(char *text,int cislo){
+void chyba(const char *text,int cislo){
         perror(text);
         exit(cislo);
 }
@@ -41,12 +41,17 @@ if(decodeArgv(argc,argv,NULL,&port)){
     vytvorZP(12345);
     pripojZP(&pdataArm);    //spoji zdielanu pamet so strukturou armData
     initRobotArm(&(*pdataArm));
+//defaultne hodnoty
     pdataArm->r0=100;
     pdataArm->r1=100;
     pdataArm->x0=250;
     pdataArm->y0=10;
-    pdataArm->rych0=0.2;
-    pdataArm->rych1=0.2;
+    pdataArm->rych0=0.4;
+    pdataArm->rych1=0.4;
+//-------------------------
+    int sem_id = semCreate(12345,1);   //vytvor semafor
+    semInit(sem_id,0,1);
+//-------------------------
     while(1)
     {
 	printf("Cakam na noveho klienta na porte %d\n",port);
@@ -56,47 +61,52 @@ if(decodeArgv(argc,argv,NULL,&port)){
 		case-1: chyba("Chyba pri vytvarani noveho procesu:\n",-104);break;
 		case 0: if (close(sockFileDesc)<0)	chyba("Chyba pri zatvarani socketu:\n",-5);
 			int por;
-			read(client,&por,sizeof(int));
-			printf("%d\n",por);
-			pripojZP(&pdataArm);	//spoji zdielanu pamet so strukturou armData
+/*			        struct timeval timeout;
+		        timeout.tv_sec = 4;
+        		timeout.tv_usec = 0;
+        		if (setsockopt (client, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0);
+        		if (setsockopt (client, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,sizeof(timeout)) < 0);
+*/			recv(client,&por, sizeof(por),0);
+			pripojZP(&pdataArm);	//spoji zdielanu pamet so strukturou armData	
 			printf("Pripojeny klient c:%d\n",por);
 			switch(por){
-				case 1:while(1){
-						length=0;
-                                                while((length+=recv(client,&pdataArm->actAlfa, sizeof(pdataArm->actAlfa),0)) < sizeof(pdataArm->actAlfa));
-						length=0;
-						while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
-					}break;
-				case 2:while(1){
-                                               	length=0;
-                                               	while((length+=recv(client,&pdataArm->actBeta, sizeof(pdataArm->actBeta),0)) < sizeof(pdataArm->actBeta));
-						length=0;
-                                                while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));                                        			    }break;
-				case 3:	while(1){
-						length=0;
-                                                while((length+=recv(client,&a, sizeof(a),0)) < sizeof(a));
-						length=0;
-						if(a==4)	while((length+=recv(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
-						else		while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
-					}break;
-				case 4:	sleep(1);
-					struct act aktualne;
+				case 1: usleep(100);
 					while(1){
+						semWait(sem_id,0);
+                                                recv(client,&pdataArm->actAlfa, sizeof(pdataArm->actAlfa),0);
+						send(client,&(*pdataArm), sizeof(*pdataArm),0);
+						semPost(sem_id,0);
+					}break;
+				case 2: usleep(200);
+					while(1){
+						semWait(sem_id,0);
+                                               	recv(client,&pdataArm->actBeta, sizeof(pdataArm->actBeta),0);
+                                                send(client,&(*pdataArm), sizeof(*pdataArm),0);  
+						semPost(sem_id,0);  
+				}break;
+				case 5: usleep(200);
+				case 3:	usleep(300);
+					while(1){
+						recv(client,&a, sizeof(a),0);
+						semWait(sem_id,0);
 						length=0;
-						while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
-						length=0;
-                				while((length+=recv(client,&aktualne, sizeof(aktualne),0)) < sizeof(aktualne));
+						if(a==4)	recv(client,&(*pdataArm), sizeof(*pdataArm),0);
+						else		send(client,&(*pdataArm), sizeof(*pdataArm),0);
+						semPost(sem_id,0);
+					}break;
+				case 4:	struct act aktualne;
+					usleep(400);
+					while(1){
+						semWait(sem_id,0);
+						send(client,&(*pdataArm), sizeof(*pdataArm),0);
+						recv(client,&aktualne, sizeof(aktualne),0);
 						pdataArm->actX1 = aktualne.datX1;
 						pdataArm->actY1 = aktualne.datY1;
 						pdataArm->actX2 = aktualne.datX2;
 						pdataArm->actY2 = aktualne.datY2;
+						semPost(sem_id,0);
 					}
 					break;
-				default:
-					while(1){
-                                                length=0;
-                                                while((length+=send(client,&(*pdataArm), sizeof(*pdataArm),0)) < sizeof(*pdataArm));
-      					}break;
 			}
 //			uvolniZP();*/
 			if (close(client)<0)	chyba("Chyba pri zatvarani socketu:\n",-6);

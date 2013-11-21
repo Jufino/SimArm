@@ -23,20 +23,25 @@ int main(int argc,char *argv[]){
 	timer_t casovac;
  	if(decodeArgv(argc,argv,&ip,&port)){
 		int sock = pripoj(ip,&port);
+		int *por=(int*)malloc(sizeof(int));
+		*por=3;
+		odosliInt(&(*por));
+		printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
+                free(por);
 		buff[0]='\0';
-		int por=3;
-		odosliInt(&por);
 		//-------------
-  		funkciaCasovac(SIGUSR1,socketAprint);
-  		casovac=vytvorCasovac(SIGUSR1);
-  		opakovanyCasovac(casovac,0,150);
+  		funkciaCasovac(SIGUSR2,socketAprint);
+  		casovac=vytvorCasovac(SIGUSR2);
+  		opakovanyCasovac(casovac,100);
 		//------------
-		while(1)	readKey();
+		while(1){
+			readKey();
+			usleep(100);
+		}
 		uzavri();
 		return 0;
 	}
 }
-
 int kbhit(void){
   struct termios oldt, newt;
   int ch;
@@ -63,7 +68,7 @@ int kbhit(void){
   return 0;
 }
 
-char *x[] = {"r0","r1","x2","y2","rych0","rych1","x0","y0"};
+const char *x[] = {"r0","r1","x2","y2","rych0","rych1","x0","y0"};
 void readKey(){
 	if (kbhit()){
 		char znak = getchar();
@@ -88,14 +93,17 @@ void readKey(){
 				}
 				else{
 					mod = 0;
-					if(!strcmp(prem,x[0]))		dataArm.r0 = atof(buff);
-					else if(!strcmp(prem,x[1]))  	dataArm.r1 = atof(buff);
-					else if(!strcmp(prem,x[2]))  	dataArm.x2 = atof(buff);
-					else if(!strcmp(prem,x[3]))  	dataArm.y2 = atof(buff);
-					else if(!strcmp(prem,x[4]))  	dataArm.rych0 = atof(buff);
-					else if(!strcmp(prem,x[5]))  	dataArm.rych1 = atof(buff); 
-					else if(!strcmp(prem,x[6]))     dataArm.x0 = atof(buff);
-					else if(!strcmp(prem,x[7]))     dataArm.y0 = atof(buff);
+					if (strcmp(buff,"")){
+						if(!strcmp(prem,x[0]))		dataArm.r0 = atof(buff);
+						else if(!strcmp(prem,x[1]))  	dataArm.r1 = atof(buff);
+						else if(!strcmp(prem,x[2]))  	dataArm.x2 = atof(buff);
+						else if(!strcmp(prem,x[3]))  	dataArm.y2 = atof(buff);
+						else if(!strcmp(prem,x[4]))  	dataArm.rych0 = atof(buff);
+						else if(!strcmp(prem,x[5]))  	dataArm.rych1 = atof(buff); 
+						else if(!strcmp(prem,x[6]))     dataArm.x0 = atof(buff);
+						else if(!strcmp(prem,x[7]))     dataArm.y0 = atof(buff);
+					}
+					else mod = -1;
 				}
 				buff[0]='\0';
 			}
@@ -104,6 +112,7 @@ void readKey(){
 		else	mod = 0;
 	}
 }
+int i=0;
 void vypis(){
         printf("Stale hodnoty\n");
 	printf("r0:\t\t%f\tr1:\t%f\n",pdataArm->r0,pdataArm->r1);
@@ -115,28 +124,32 @@ void vypis(){
 	printf("\nAktualne hodnoty\n");
 	printf("actX1:\t\t%f\tactY1:\t\t%f\n",pdataArm->actX1,pdataArm->actY1);
 	printf("actX2:\t\t%f\tactY2:\t\t%f\n",pdataArm->actX2,pdataArm->actY2);
-	printf("actAlfa:\t%f\tactBeta:\t%f\n\n",pdataArm->actAlfa,pdataArm->actBeta);
+	printf("actAlfa:\t%f\tactBeta:\t%f\n",pdataArm->actAlfa,pdataArm->actBeta);
+	printf("\nJe mozne prestavit tieto parametre ");
+	for(i=0;i<8;i++) printf("%s, ",x[i]);
+	printf("\n\n");
 	if (mod ==0)            printf("Vyber premennu:%s",buff);
         else if(mod==1)         printf("Nastav premennu %s na:%s",prem,buff);
-        else if(mod==-1)        printf("Nebola zadana platna premenna");
+        else if(mod==-1)        printf("Nebola zadana platna premenna alebo hodnota");
         else                    printf("Stlac nejaku klavesu pre nastavenia");
 }
-
+int test;
 void socketAprint(int signal , siginfo_t * siginfo, void * ptr)
 {
   switch (signal)
   {
-    case SIGUSR1:
+    case SIGUSR2:
       if(mod==4){
-        odosliInt(&mod);
-        odosliRobotArm(&dataArm);
+	odosliInt(&mod);
+	odosliRobotArm(&dataArm);
       	mod=3;
       }
       else if(mod==3){
         odosliInt(&mod);
       	nacitajRobotArm(&dataArm);
       }
-      system("clear");
+      printf("\033[2J");
+      printf("\033[H");
       vypis();
       break;
   }

@@ -15,11 +15,13 @@ int main(int argc,char *argv[]){
 	int port;
 	float a=0;
 	char *ip;
-	usleep(10000);
 	if(decodeArgv(argc,argv,&ip,&port)){
 		int sock = pripoj(ip,&port);
-		int por=2;
-		write(sock,&por,sizeof(por));
+                int *por=(int*)malloc(sizeof(int));
+                *por=2;
+                odosliInt(&(*por));
+                printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
+                free(por);
 		pthread_t vlakno;
        		pthread_attr_t parametre;
         	if(pthread_attr_init(&parametre)) perror("Problem inicializacie vlakna");

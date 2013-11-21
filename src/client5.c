@@ -36,28 +36,46 @@ void plot(int x[],int y[],int length){
 }
 int mouseX=0;
 int mouseY=200;
+int mod = 3;
 void mouseEvent(int evt, int x, int y, int flags, void* param){
      if(evt==CV_EVENT_LBUTTONDOWN){
+	mod=2;
+	usleep(100000);
         mouseX = x;
         mouseY = height-y;
+	dataArm.x2 = mouseX;
+	dataArm.y2 = mouseY;
+        if(angleArmEnd(&dataArm)==0){	mod = 4;				  }
+        else                        { printf("Bod nedosiahnutelny\n");    mod = 3;}
         printf("%d %d\n",mouseX,mouseY);
     }
 }
 int sock;
+int test;
 void *readSocket(void*){
-	int length=0;
-	while(1){    
-		while((length+=recv(sock,&dataArm, sizeof(dataArm),0)) < sizeof(dataArm));
-		length=0;
-	}
+while(1){
+      if(mod==4){
+        odosliInt(&mod);
+	odosliRobotArm(&dataArm);
+        mod=3;
+      }
+      else if(mod==3){
+        odosliInt(&mod);
+        nacitajRobotArm(&dataArm);
+      }
+}
+	return 0;
 }
 int main(int argc,char *argv[]){
 	int port;
 	char *ip;
  if(decodeArgv(argc,argv,&ip,&port)){
 	sock = pripoj(ip,&port);
-	int por=5;
-	write(sock,&por,sizeof(por));
+	int *por=(int*)malloc(sizeof(int));
+        *por=5;
+        odosliInt(&(*por));
+        printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
+        free(por);
 	pthread_t vlakno;
         pthread_create(&vlakno,NULL,&readSocket,NULL);
 	while(1){

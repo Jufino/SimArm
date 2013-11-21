@@ -10,6 +10,10 @@
 #include "decodeArgv.h"
 #include <pthread.h>
 #include "semafor.h"
+#include <signal.h>
+void sigctrl(int param);
+void sigctrl1(int param);
+void sigpipe(int param);
 void chyba(const char *text,int cislo){
         perror(text);
         exit(cislo);
@@ -18,14 +22,15 @@ int *pocitadlo=0;
 int client;
 struct RobotArm dataArm;
 struct RobotArm *pdataArm=&dataArm;
+char zap = 1;
+int sem_id;
+int poc_klientov=0;
+int sockFileDesc;
 int main(int argc,char *argv[]){
-    int sockFileDesc;
     struct sockaddr_in adresa,pripojilSa;
     pdataArm = &dataArm;
-    int length=0;
-//    struct datSock dataSocket;
     int port;
-    int a=0;
+    signal(SIGINT, sigctrl);
 if(decodeArgv(argc,argv,NULL,&port)){
     socklen_t velkost;
   if((sockFileDesc=socket(AF_INET, SOCK_STREAM, 0))<0)	chyba("Chyba pri vytvarani socketu:\n",-1);
@@ -49,54 +54,48 @@ if(decodeArgv(argc,argv,NULL,&port)){
     pdataArm->rych0=0.4;
     pdataArm->rych1=0.4;
 //-------------------------
-    int sem_id = semCreate(12345,1);   //vytvor semafor
+    sem_id = semCreate(12345,1);   //vytvor semafor
     semInit(sem_id,0,1);
 //-------------------------
-    while(1)
+    printf("Server aktivny spusteny na porte %d\n",port);
+    while(zap)
     {
-	printf("Cakam na noveho klienta na porte %d\n",port);
 	if((client=accept(sockFileDesc, (struct sockaddr *)&pripojilSa, &velkost))<0) chyba("Chyba pri vytvarani spojenia:\n",-4);
 	//prijme klientov`
+	poc_klientov++;
 	switch(fork()){ //vytvori novy proces pre klienta
 		case-1: chyba("Chyba pri vytvarani noveho procesu:\n",-104);break;
 		case 0: if (close(sockFileDesc)<0)	chyba("Chyba pri zatvarani socketu:\n",-5);
 			int por;
-/*			        struct timeval timeout;
-		        timeout.tv_sec = 4;
-        		timeout.tv_usec = 0;
-        		if (setsockopt (client, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0);
-        		if (setsockopt (client, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,sizeof(timeout)) < 0);
-*/			recv(client,&por, sizeof(por),0);
+			signal(SIGINT, sigctrl1);
+			signal(SIGPIPE, sigpipe);
+			recv(client,&por, sizeof(por),0);
 			pripojZP(&pdataArm);	//spoji zdielanu pamet so strukturou armData	
-			printf("Pripojeny klient c:%d\n",por);
+			printf("Pripojeny klient c:%d\n",por);			
 			switch(por){
-				case 1: usleep(100);
-					while(1){
+				case 1: while(zap){
 						semWait(sem_id,0);
                                                 recv(client,&pdataArm->actAlfa, sizeof(pdataArm->actAlfa),0);
 						send(client,&(*pdataArm), sizeof(*pdataArm),0);
 						semPost(sem_id,0);
 					}break;
-				case 2: usleep(200);
-					while(1){
+				case 2: while(zap){
 						semWait(sem_id,0);
                                                	recv(client,&pdataArm->actBeta, sizeof(pdataArm->actBeta),0);
                                                 send(client,&(*pdataArm), sizeof(*pdataArm),0);  
 						semPost(sem_id,0);  
 				}break;
-				case 5: usleep(200);
-				case 3:	usleep(300);
-					while(1){
+				case 5: 
+				case 3:	int a;
+					while(zap){
 						recv(client,&a, sizeof(a),0);
 						semWait(sem_id,0);
-						length=0;
 						if(a==4)	recv(client,&(*pdataArm), sizeof(*pdataArm),0);
 						else		send(client,&(*pdataArm), sizeof(*pdataArm),0);
 						semPost(sem_id,0);
 					}break;
 				case 4:	struct act aktualne;
-					usleep(400);
-					while(1){
+					while(zap){
 						semWait(sem_id,0);
 						send(client,&(*pdataArm), sizeof(*pdataArm),0);
 						recv(client,&aktualne, sizeof(aktualne),0);
@@ -108,7 +107,6 @@ if(decodeArgv(argc,argv,NULL,&port)){
 					}
 					break;
 			}
-//			uvolniZP();*/
 			if (close(client)<0)	chyba("Chyba pri zatvarani socketu:\n",-6);
 	    		printf("Spojenie ukoncene klient c.%d\n",por);
 	    		exit(0);					
@@ -116,6 +114,25 @@ if(decodeArgv(argc,argv,NULL,&port)){
 	    		if (close(client)<0)	chyba("Chyba pri zatvarani socketu:\n",-7);
 		}
     }
-//    uzavriZP();
 }
 }
+void sigctrl(int param)
+{
+  printf("Server sa vypina\n");
+  printf("Vymazavam zdielanu pamet\n");
+  uzavriZP();
+  printf("Vymazavam semafor\n");
+  semRem(sem_id);
+  sleep(1);	
+  if (close(sockFileDesc)<0)    chyba("Chyba pri zatvarani socketu:\n",-7);
+  exit(0);
+}
+void sigctrl1(int param)
+{
+//  printf("Vypinanie klientov\n");
+  zap = 0;
+}
+void sigpipe(int param){
+zap = 0;
+}
+

@@ -5,10 +5,15 @@
 #include "socket.h"
 #include "decodeArgv.h"
 #include <pthread.h>
+#include <signal.h>
+
 struct RobotArm dataArm=RobotArm_default;
 struct RobotArm *pdataArm=&dataArm;
+char zap=1;
+void sigpipe(int param);
+void sigend(int param);
 void *readSocket(void *){
-	while(1)	nacitajRobotArm(&dataArm);
+	while(zap)	nacitajRobotArm(&dataArm);
 }
 int main(int argc,char *argv[]){
 	int length=0;
@@ -19,6 +24,8 @@ int main(int argc,char *argv[]){
 		int sock = pripoj(ip,&port);
                 int *por=(int*)malloc(sizeof(int));
                 *por=2;
+		signal(SIGINT, sigend);
+		signal(SIGPIPE, sigpipe);
                 odosliInt(&(*por));
                 printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
                 free(por);
@@ -27,7 +34,7 @@ int main(int argc,char *argv[]){
         	if(pthread_attr_init(&parametre)) perror("Problem inicializacie vlakna");
 		pthread_attr_setdetachstate(&parametre, PTHREAD_CREATE_DETACHED);  
         	pthread_create(&vlakno,&parametre,readSocket,NULL);
-		while(1){
+		while(zap){
 			if (pdataArm->beta != pdataArm->actBeta){
 				if (pdataArm->beta-0.005 > pdataArm->actBeta)	pdataArm->actBeta+=0.01;
 				else if (pdataArm->beta+0.005 < pdataArm->actBeta) pdataArm->actBeta-=0.01;
@@ -39,3 +46,15 @@ int main(int argc,char *argv[]){
 	}
 	return 0;
 }
+void sigpipe(int param){
+printf("Server bol neocakavane zruseny\n");
+zap=0;
+uzavri();
+exit(0);
+}
+void sigend(int param){
+zap = 0;
+uzavri();
+exit(0);
+}
+

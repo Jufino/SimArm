@@ -13,6 +13,8 @@
 #include <opencv2/opencv.hpp>
 #include <unistd.h>
 #include <thread>
+#include <signal.h>
+
 using namespace cv;
 #define hrubka_ciary 10
 #define nazov_okna "Simulacia roboticka ruka"
@@ -34,6 +36,7 @@ void plot(int x[],int y[],int length){
         }
         cvReleaseImage(&img);
 }
+char zap=1;
 int mouseX=0;
 int mouseY=200;
 int mod = 3;
@@ -50,10 +53,12 @@ void mouseEvent(int evt, int x, int y, int flags, void* param){
         printf("%d %d\n",mouseX,mouseY);
     }
 }
+void sigpipe(int param);
+void sigend(int param);
 int sock;
 int test;
 void *readSocket(void*){
-while(1){
+while(zap){
       if(mod==4){
         odosliInt(&mod);
 	odosliRobotArm(&dataArm);
@@ -78,11 +83,13 @@ int main(int argc,char *argv[]){
         free(por);
 	pthread_t vlakno;
         pthread_create(&vlakno,NULL,&readSocket,NULL);
-	while(1){
+	while(zap){
 	cvNamedWindow(nazov_okna, CV_WINDOW_AUTOSIZE);
         cvSetMouseCallback(nazov_okna, mouseEvent, 0);
         int q=-1;
-        while(q!=27){
+	signal(SIGPIPE, sigpipe);
+	signal(SIGINT, sigend);
+        while(q!=27 && zap!=0){
         	int x[] = {(int)dataArm.x0,(int)dataArm.actX1,(int)dataArm.actX2};
         	int y[] = {(int)dataArm.y0,(int)dataArm.actY1,(int)dataArm.actY2};
         	plot(x,y,3);
@@ -94,3 +101,11 @@ int main(int argc,char *argv[]){
 	return 0;
 }
 }
+void sigpipe(int param){
+printf("Server bol neocakavane zruseny\n");
+zap=0;
+}
+void sigend(int param){
+zap = 0;
+}
+

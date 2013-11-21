@@ -9,14 +9,19 @@
 #include <termios.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 
 struct RobotArm dataArm=RobotArm_default;
 struct RobotArm *pdataArm=&dataArm;
 int mod=3;
 char buff[15];
 char prem[15];
+char zap=1;
 void socketAprint (int signal , siginfo_t * siginfo, void * ptr);
 void readKey();
+void sigpipe(int param);
+void sigend(int param);
+
 int main(int argc,char *argv[]){
 	int port;
 	char *ip;
@@ -25,6 +30,8 @@ int main(int argc,char *argv[]){
 		int sock = pripoj(ip,&port);
 		int *por=(int*)malloc(sizeof(int));
 		*por=3;
+		signal(SIGINT, sigend);
+		signal(SIGPIPE, sigpipe);
 		odosliInt(&(*por));
 		printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
                 free(por);
@@ -34,7 +41,7 @@ int main(int argc,char *argv[]){
   		casovac=vytvorCasovac(SIGUSR2);
   		opakovanyCasovac(casovac,100);
 		//------------
-		while(1){
+		while(zap){
 			readKey();
 			usleep(100);
 		}
@@ -89,6 +96,10 @@ void readKey(){
 							else				mod = 0;
 							break;
 						}
+						else if(!strcmp(buff,"pokracuj")){
+                                                        mod = 3;
+                                                }
+
 					}
 				}
 				else{
@@ -127,11 +138,11 @@ void vypis(){
 	printf("actAlfa:\t%f\tactBeta:\t%f\n",pdataArm->actAlfa,pdataArm->actBeta);
 	printf("\nJe mozne prestavit tieto parametre ");
 	for(i=0;i<8;i++) printf("%s, ",x[i]);
-	printf("\n\n");
+	printf("\nK dispozicii su tieto prikazy: odosli, pokracuj\n\n");
 	if (mod ==0)            printf("Vyber premennu:%s",buff);
         else if(mod==1)         printf("Nastav premennu %s na:%s",prem,buff);
         else if(mod==-1)        printf("Nebola zadana platna premenna alebo hodnota");
-        else                    printf("Stlac nejaku klavesu pre nastavenia");
+        else                    printf("Stlac nejaku klavesu pre nastavenia\n");
 }
 int test;
 void socketAprint(int signal , siginfo_t * siginfo, void * ptr)
@@ -154,3 +165,11 @@ void socketAprint(int signal , siginfo_t * siginfo, void * ptr)
       break;
   }
 }
+void sigpipe(int param){
+printf("\nServer bol neocakavane zruseny\n");
+zap=0;
+}
+void sigend(int param){
+zap = 0;
+}
+

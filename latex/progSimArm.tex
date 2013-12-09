@@ -1,0 +1,112 @@
+% !TeX spellcheck = sk
+\documentclass{article}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{verbatim}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage[slovak]{babel}
+\usepackage[latin2,utf8x]{inputenc}
+\usetikzlibrary{shapes,arrows}
+% Define block styles
+\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
+    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+    text width=10em, text centered, rounded corners, minimum height=4em]
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
+    minimum height=2em]
+
+\title{Programátorská príručka pre SimArm}
+\date{December 06 2016}
+\author{Juraj Fojtí­k}
+\begin{document}
+\maketitle
+\section{Stromový diagram:}
+\tikzstyle{int}=[draw, fill=blue!20, minimum size=2em]
+\tikzstyle{init} = [pin edge={to-,thin,black}]
+\begin{tikzpicture}[node distance=2.5cm,auto,>=latex']
+    \node [int] (s) {Server};
+    \node [int] (3) [below of=s] {Klient 3};
+    \node [int] (2) [left of=3] {Klient 2};
+    \node [int] (1) [left of=2] {Klient 1};
+    \node [int] (4) [right of=3] {Klient 4};
+    \node [int] (5) [right of=4] {Klient 5};
+    \path[<->] (s) edge node {} (1);
+    \path[<->] (s) edge node {} (2);
+    \path[<->] (s) edge node {} (3);
+    \path[<->] (s) edge node {} (4);
+    \path[<->] (s) edge node {} (5);
+\end{tikzpicture}
+\newline\newline
+Server: prenos dát medzi klientami\newline
+Klient1: Riadenie prvého motora(v čase)\newline
+Klient2: Riadenie druhého motora(v čase)\newline
+Klient3: Nastavovanie základných parametrov robotickej ruky(užívateľské rozhranie)\newline
+Klient4: Prepočet pozícií pre grafické zobrazenie robotickej ruky\newline
+Klient5: Zobrazenie robotickej ruky v okne(užívateľské rozhranie) \newline\newline
+\section{Server}
+- dekódovanie argumentov(-i,-p,-h)\newline
+- vytvorenie soket deskriptoru (socket)\newline
+- priradenie parametrov nastavenia soketu do štruktúry (AFINET práca na lokálnej sieti,port,INADDRANY prijímanie všetkých ip adries)\newline
+- priradenie informácii zo štruktúry do soket deskriptoru(bind)\newline
+- nastavenie počúvania serveru(listen)\newline
+- vytvorenie zdielanej pamäte(vytvorZP) \newline
+- pri mapovanie zdielanej pamäte(pripojZP) \newline
+- inicializácia dát štruktúry(initRobotArm)\newline
+- vytvorenie semaforu (semCreate)\newline
+- inicializácia semaforu(semInit)\newline
+- čakanie na klienta(accept)\newline
+- po pripojení klienta priradenie soket deskriptoru, vytvorenie nového procesu+test správnosti vytvorenia procesu(fork)\newline
+- v procese serveru - uzavretie soket deskriptoru klienta, vrátenie sa na čakanie klienta\newline
+- v procese klienta - uzavretie soket deskriptoru serveru\newline
+- nastavenie signálov pre zrušenie soketu a ctrl+c - udalosť(signal,SIGINT,SIGPIPE)\newline
+- prijatie id klienta(recv)\newline
+- pripojenie zdielanej pamäte(pripojZP)\newline
+- prijímanie a odosielanie dát závisí na tom, ktoré id bolo prijaté
+\section{Klient č.1}
+- dekódovanie argumentov(-i,-p,-h)\newline
+- pripojenie sa na server(pripoj)\newline
+- nastavenie signálov pre zrušenie soketu a ctrl+c - udalosť(signal,SIGINT,SIGPIPE)\newline
+- odoslanie id klienta(odosliInt)\newline
+- vytvorenie vlákna pre čítanie zo soketu(pthread\_create)\newline
+- práca s premennou pdataArm->actAlfa\newline
+- odoslanie pdataArm->actAlfa\newline
+\section{Klient č.2}
+- dekódovanie argumentov(-i,-p,-h)\newline
+- pripojenie sa na server(pripoj)\newline
+- nastavenie signálov pre zrušenie soketu a ctrl+c - udalosť(signal,SIGINT,SIGPIPE)\newline
+- odoslanie id klienta(odosliInt)\newline
+- vytvorenie vlákna pre čítanie zo soketu(pthread\_create)\newline
+- práca s premennou pdataArm->actBeta\newline
+- odoslanie pdataArm->actBeta\newline
+\section{Klient č.3}
+- dekódovanie argumentov(-i,-p,-h)\newline
+- pripojenie sa na server(pripoj)\newline
+- nastavenie signálov pre zrušenie soketu a ctrl+c - udalosť(signal,SIGINT,SIGPIPE)\newline
+- odoslanie id klienta(odosliInt)\newline
+- nastavenie funkcie pre signál(funkciaCasovac) \newline
+- vytvorenie časovača so signálom(vytvorCasovac)\newline
+- nastavenie času pre časovač(opakovanyCasovac)\newline
+- v časovači odosielanie, prijímanie dát štruktúry vymazanie plochy a výpis\newline
+- v hlavnom vlákne načítavanie z klávesnice\newline
+\section{Klient č.4}
+- dekódovanie argumentov(-i,-p,-h)\newline
+- pripojenie sa na server(pripoj)
+- nastavenie signálov pre zrušenie soketu a ctrl+c - udalosť(signal,SIGINT,SIGPIPE)\newline
+- odoslanie id klienta(odosliInt)\newline
+- načítanie dát zo soketu(nacitajRobotArm)\newline
+- vypočítanie aktualneho stavu bodov a uhlov(angleArmAct)\newline
+- odoslanie dát cez soket(send)\newline
+\section{Klient č.5}
+- dekódovanie argumentov(-i,-p,-h)\newline
+- pripojenie sa na server(pripoj)
+- nastavenie signálov pre zrušenie soketu a ctrl+c - udalosť(signal,SIGINT,SIGPIPE)\newline
+- odoslanie id klienta(odosliInt)\newline
+- vytvorenie vlákna pre načítavanie zo soketu(pthread\_create)\newline
+- vytvorenie okna(cvNamedWindow)\newline
+- nastavenie callbacku pre myš(cvSetMouseCallback)\newline
+- vyplotovanie bodov\newline
+\end{document}

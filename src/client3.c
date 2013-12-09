@@ -36,6 +36,7 @@ int main(int argc,char *argv[]){
 		printf("Klient c.%d pripojeny(%s,%d)\n",*por,ip,port);
                 free(por);
 		buff[0]='\0';
+		usleep(1000);
 		//-------------
   		funkciaCasovac(SIGUSR2,socketAprint);
   		casovac=vytvorCasovac(SIGUSR2);
@@ -43,7 +44,7 @@ int main(int argc,char *argv[]){
 		//------------
 		while(zap){
 			readKey();
-			usleep(100);
+			usleep(50);
 		}
 		uzavri();
 		return 0;
@@ -79,7 +80,7 @@ const char *x[] = {"r0","r1","x2","y2","rych0","rych1","x0","y0"};
 void readKey(){
 	if (kbhit()){
 		char znak = getchar();
-		if(mod != -1 && mod != 3){
+		if(mod != -1 && mod != 3 && mod != -2){
 			int i;
 			if(znak!='\n' && znak != 127)	sprintf(buff,"%s%c",buff,znak);
 			else if(znak == '\n'){
@@ -109,8 +110,15 @@ void readKey(){
 						else if(!strcmp(prem,x[1]))  	dataArm.r1 = atof(buff);
 						else if(!strcmp(prem,x[2]))  	dataArm.x2 = atof(buff);
 						else if(!strcmp(prem,x[3]))  	dataArm.y2 = atof(buff);
-						else if(!strcmp(prem,x[4]))  	dataArm.rych0 = atof(buff);
-						else if(!strcmp(prem,x[5]))  	dataArm.rych1 = atof(buff); 
+						else if(!strcmp(prem,x[4])){  	
+							
+							if(atof(buff) > 0.5) 	mod = -2;
+							else 			dataArm.rych0 = atof(buff);
+						}
+						else if(!strcmp(prem,x[5])){
+							if(atof(buff) > 0.5) 	mod = -2;
+							else			dataArm.rych1 = atof(buff);
+						} 
 						else if(!strcmp(prem,x[6]))     dataArm.x0 = atof(buff);
 						else if(!strcmp(prem,x[7]))     dataArm.y0 = atof(buff);
 					}
@@ -141,8 +149,9 @@ void vypis(){
 	printf("\nK dispozicii su tieto prikazy: odosli, pokracuj\n\n");
 	if (mod ==0)            printf("Vyber premennu:%s",buff);
         else if(mod==1)         printf("Nastav premennu %s na:%s",prem,buff);
+	else if(mod==-2)	printf("Rychlost moze byt maximalne 0.5 rad/s");
         else if(mod==-1)        printf("Nebola zadana platna premenna alebo hodnota");
-        else                    printf("Stlac nejaku klavesu pre nastavenia\n");
+        else                    printf("Stlac nejaku klavesu pre nastavenia");
 }
 int test;
 void socketAprint(int signal , siginfo_t * siginfo, void * ptr)
